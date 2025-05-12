@@ -15,8 +15,8 @@ from main_worker import run_worker_task, DEFAULT_CSV_FIELDNAMES
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(processName)s - %(levelname)s - %(message)s')
 
 # --- Константы ---
-DEFAULT_BATCH_SIZE = 100
-DEFAULT_DESIRED_POOL_WORKERS = 19 # Это значение по умолчанию
+DEFAULT_BATCH_SIZE = 20
+DEFAULT_DESIRED_POOL_WORKERS = 9 # Это значение по умолчанию
 DEFAULT_NUM_POOL_WORKERS_SPECIFICALLY_WITHOUT_PROXY = 4 # Это значение по умолчанию
 
 BATCH_SIZE = int(os.environ.get('BATCH_SIZE', DEFAULT_BATCH_SIZE))
@@ -321,8 +321,7 @@ def main_multiprocess_run():
              else:
                   logging.info(f"Батч {batch_num_overall}: Основной прямой воркер успешно завершен.")
         
-        retry_queue.close()
-        retry_queue.join_thread()
+        retry_queue._close()
         
         # ----- Обновление прогресса ПОСЛЕ успешной обработки батча -----
         next_batch_start_index_for_progress = current_absolute_start_index_of_batch + len(batch_urls)

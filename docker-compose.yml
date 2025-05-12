@@ -6,7 +6,7 @@ services:
     container_name: soundcloud_parser_app
     restart: unless-stopped
     environment:
-      - BATCH_SIZE=100
+      - BATCH_SIZE=20
       - DESIRED_POOL_WORKERS=9
       - NUM_POOL_WORKERS_SPECIFICALLY_WITHOUT_PROXY=4
     volumes:

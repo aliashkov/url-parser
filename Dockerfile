@@ -4,8 +4,8 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
 # Значения по умолчанию, могут быть переопределены в docker-compose.yml
-ENV BATCH_SIZE=100
-ENV DESIRED_POOL_WORKERS=19
+ENV BATCH_SIZE=20
+ENV DESIRED_POOL_WORKERS=9
 ENV NUM_POOL_WORKERS_SPECIFICALLY_WITHOUT_PROXY=4
 
 RUN apt-get update && \
@@ -33,7 +33,7 @@ RUN playwright install --with-deps chromium # Установка браузер�
 
 # Копируем все необходимые скрипты Python
 COPY csv_utils.py .
-COPY main_worker.py . # Убедитесь, что этот файл существует и актуален
+COPY main_worker.py .
 COPY proxy_utils.py .
 COPY run_parser.py .
 COPY soundcloud_parser.py .
