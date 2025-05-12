@@ -1,8 +1,9 @@
 services:
   soundcloud-parser:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    # build:  # Можно использовать build или image
+    #   context: .
+    #   dockerfile: Dockerfile
+    image: soundcloud-parser-app:latest
     container_name: soundcloud_parser_app
     restart: unless-stopped
     environment:
@@ -10,6 +11,9 @@ services:
       - DESIRED_POOL_WORKERS=9
       - NUM_POOL_WORKERS_SPECIFICALLY_WITHOUT_PROXY=4
     volumes:
-      - ./users_test.txt:/app/users_test.txt:ro
-      - ./working_proxies.txt:/app/working_proxies.txt:ro
+      # --- Эти строки НУЖНО УДАЛИТЬ или закомментировать ---
+      # - ./users_test.txt:/app/users_test.txt:ro
+      # - ./working_proxies.txt:/app/working_proxies.txt:ro
+      # --- ---
+      # Оставьте этот том, если хотите сохранять результаты на хосте
       - ./output_on_host:/app/output_files

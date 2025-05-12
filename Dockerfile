@@ -3,7 +3,7 @@ FROM python:3.11-slim-bullseye
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 
-# Значения по умолчанию, могут быть переопределены в docker-compose.yml
+# Значения по умолчанию, могут быть переопределены в docker-compose.yml или при запуске docker run -e
 ENV BATCH_SIZE=20
 ENV DESIRED_POOL_WORKERS=9
 ENV NUM_POOL_WORKERS_SPECIFICALLY_WITHOUT_PROXY=4
@@ -15,21 +15,29 @@ RUN apt-get update && \
     libx11-6 libx11-xcb1 libxcb1 libxcomposite1 libxcursor1 libxdamage1 libxext6 libxfixes3 \
     libxi6 libxrandr2 libxrender1 libxss1 libxtst6 libgbm1 libpango-1.0-0 libcairo2 \
     libasound2 libgdk-pixbuf2.0-0 \
-    # curl был для docker-compose, который здесь не нужен
+    # Зависимости, которые могут понадобиться для curl или других утилит
+    ca-certificates curl \
     && apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Установка docker-compose внутри этого контейнера не нужна, если он только запускает скрипт
+# --- Начало блока установки docker-compose ---
+# ВНИМАНИЕ: Установка docker-compose ВНУТРИ этого контейнера обычно НЕ нужна,
+# если этот контейнер просто запускает Python скрипт (run_parser.py).
+# docker-compose используется на ХОСТЕ для управления контейнерами.
+# Оставляю закомментированным, так как скорее всего это не требуется.
+# Если он действительно нужен ВНУТРИ контейнера для какой-то специфической задачи, раскомментируйте:
 # ARG DOCKER_COMPOSE_VERSION=v2.24.6
 # RUN curl -SL https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-linux-x86_64 \
 #     -o /usr/local/bin/docker-compose && \
 #     chmod +x /usr/local/bin/docker-compose
+# --- Конец блока установки docker-compose ---
 
 WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN playwright install --with-deps chromium # Установка браузера для Playwright
+# Установка браузера для Playwright и его зависимостей
+RUN playwright install --with-deps chromium
 
 # Копируем все необходимые скрипты Python
 COPY csv_utils.py .
@@ -37,11 +45,17 @@ COPY main_worker.py .
 COPY proxy_utils.py .
 COPY run_parser.py .
 COPY soundcloud_parser.py .
-# COPY check_proxy_script.py . # Если скрипт проверки прокси отдельный и нужен
+# COPY check_proxy_script.py . # Раскомментируйте, если этот файл существует и нужен
 
-# Не копируем users_test.txt, так как он монтируется через volume
-# COPY users_test.txt .
-# working_proxies.txt также монтируется, можно не копировать или оставить для тестов без compose
-# COPY working_proxies.txt .
+# --- Копируем файлы данных ВНУТРЬ образа ---
+# Убедитесь, что эти файлы существуют в том же каталоге, что и Dockerfile,
+# или укажите правильный путь относительно контекста сборки.
+COPY users_test.txt .
+COPY working_proxies.txt .
+# --- Конец копирования файлов данных ---
+
+# output_files будут создаваться внутри контейнера.
+# Если нужно сохранить их на хосте, используйте volume в docker-compose.yml
+# для директории /app/output_files
 
 CMD ["python", "run_parser.py"]
