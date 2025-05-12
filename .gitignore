@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+users_test.txt
+
+output_files/
+processing_progress.txt # Файл для отслеживания прогресса
+
+.vscode/
+.idea/
+*.swp
