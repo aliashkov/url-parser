@@ -37,35 +37,34 @@ PROGRESS_FILE = os.path.join(OUTPUT_DATA_DIR, "processing_progress.txt")
 
 # --- Функции для работы с прогрессом ---
 def get_start_index_from_progress(prog_file: str) -> int:
-    """
-    Читает из файла прогресса индекс НАЧАЛА СЛЕДУЮЩЕГО БАТЧА для обработки.
-    Если файл не существует или пуст/некорректен, возвращает 0.
-    """
     if os.path.exists(prog_file):
         try:
             with open(prog_file, 'r') as f:
                 content = f.read().strip()
                 if content:
                     start_index = int(content)
-                    # Убедимся, что это начало батча, хотя мы должны сохранять именно так
-                    # start_index = (start_index // BATCH_SIZE) * BATCH_SIZE # Это не нужно, если сохраняем правильно
+                    # Важно: PROGRESS_FILE хранит индекс НАЧАЛА СЛЕДУЮЩЕГО БАТЧА.
+                    # Если BATCH_SIZE=20 и обработано 57, то в файле должно быть 40 (если батчи 0-19, 20-39 завершены).
+                    # Если батч 40-59 упал, то при следующем запуске мы должны начать с 40.
+                    # Поэтому здесь НЕ НУЖНО округлять start_index до ближайшего батча.
+                    # Он УЖЕ должен быть началом батча.
                     logging.info(f"Файл прогресса найден. Возобновление с URL индекса: {start_index}")
                     return start_index
         except ValueError:
             logging.warning(f"Файл прогресса '{prog_file}' содержит некорректное значение. Начинаем с начала (индекс 0).")
         except Exception as e:
             logging.error(f"Ошибка чтения файла прогресса '{prog_file}': {e}. Начинаем с начала (индекс 0).")
+    logging.info(f"Файл прогресса '{prog_file}' не найден или пуст. Начинаем с начала (индекс 0).")
     return 0
 
 def save_progress_index(prog_file: str, next_batch_start_index: int):
-    """
-    Сохраняет индекс НАЧАЛА СЛЕДУЮЩЕГО БАТЧА, который должен быть обработан.
-    """
+    """Сохраняет индекс НАЧАЛА СЛЕДУЮЩЕГО БАТЧА, который должен быть обработан."""
     try:
         os.makedirs(os.path.dirname(prog_file), exist_ok=True)
         with open(prog_file, 'w') as f:
             f.write(str(next_batch_start_index))
-        logging.debug(f"Прогресс сохранен: следующая обработка начнется с URL индекса {next_batch_start_index}.")
+        # Более информативное логгирование
+        logging.info(f"Прогресс сохранен в '{prog_file}'. Следующий батч начнется с URL индекса: {next_batch_start_index}.")
     except Exception as e:
         logging.error(f"Ошибка сохранения прогресса в '{prog_file}': {e}")
 
@@ -147,10 +146,13 @@ def main_multiprocess_run():
     # start_index_for_this_run - это абсолютный индекс в all_urls_full, с которого начинаем
     start_index_for_this_run = get_start_index_from_progress(PROGRESS_FILE)
 
-    if start_index_for_this_run >= total_urls_in_file and total_urls_in_file > 0:
-        logging.info(f"Все {total_urls_in_file} URL уже были обработаны согласно файлу прогресса. Завершение.")
-        print_final_csv_summary()
-        return
+    if start_index_for_this_run > 0:
+         # Проверка, что start_index не выходит за пределы
+        if start_index_for_this_run >= total_urls_in_file:
+            logging.info(f"Все {total_urls_in_file} URL уже были обработаны согласно файлу прогресса. Завершение.")
+            print_final_csv_summary()
+            return
+        logging.info(f"Возобновление обработки. Пропускаются первые {start_index_for_this_run} URL.")
     
     # По вашему запросу: "обработалось 60345 ... стартуй уже с 60300"
     # Если get_start_index_from_progress возвращает то, что было сохранено (например, 60300, если предыдущий батч 60200-60299 завершился
@@ -321,8 +323,7 @@ def main_multiprocess_run():
              else:
                   logging.info(f"Батч {batch_num_overall}: Основной прямой воркер успешно завершен.")
         
-        retry_queue.close()
-        retry_queue.join_thread()
+        retry_queue._close()
         
         # ----- Обновление прогресса ПОСЛЕ успешной обработки батча -----
         next_batch_start_index_for_progress = current_absolute_start_index_of_batch + len(batch_urls)
