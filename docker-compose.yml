@@ -1,15 +1,15 @@
 services:
   soundcloud-parser:
-    # build:  # Можно использовать build или image
-    #   context: .
-    #   dockerfile: Dockerfile
+    build:  # Можно использовать build или image
+      context: .
+      dockerfile: Dockerfile
     image: soundcloud-parser-app:latest
     container_name: soundcloud_parser_app
     restart: unless-stopped
     environment:
-      - BATCH_SIZE=20
-      - DESIRED_POOL_WORKERS=9
-      - NUM_POOL_WORKERS_SPECIFICALLY_WITHOUT_PROXY=4
+      - BATCH_SIZE=50
+      - DESIRED_POOL_WORKERS=14
+      - NUM_POOL_WORKERS_SPECIFICALLY_WITHOUT_PROXY=8
     volumes:
       # --- Эти строки НУЖНО УДАЛИТЬ или закомментировать ---
       # - ./users_test.txt:/app/users_test.txt:ro
